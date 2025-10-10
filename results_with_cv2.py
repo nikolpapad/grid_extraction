@@ -4,7 +4,7 @@ from split_image import split_image
 import matplotlib.pyplot as plt
 import sys
 
-or_image = cv2.imread("pics/two_angels.png")
+or_image = cv2.imread("pics/2.png")
 
 gray = cv2.cvtColor(or_image, cv2.COLOR_BGR2GRAY)
 
@@ -16,10 +16,7 @@ thresh = cv2.adaptiveThreshold(
     cv2.THRESH_BINARY,
     11, 2
 )
-
-
 contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
 
 output = or_image.copy()
 
@@ -76,7 +73,7 @@ for y in range(0, height, avg_h):
         # Count how manu pixels are white (255) or black (0)
         white_count = cv2.countNonZero(tile)
         total_pixels = avg_h * avg_w
-        label = "black" if white_count > (total_pixels / 3) else "white"
+        label = "black" if white_count > (total_pixels / 2) else "white"
         row.append(label)
         
         color = (255, 255, 255) if label == "white" else (0, 0, 0)
