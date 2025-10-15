@@ -7,101 +7,116 @@ from streamlit_cropper import st_cropper
 import pandas as pd
 import cv2
 import os
-
 st.set_page_config(page_title="Crochet Grid Cropper", layout='wide')
-
-# Initialize step
+# Initialize 
 if "step" not in st.session_state:
-    st.session_state.step = 1
+    st.session_state.step = 0
+if "base_img" not in st.session_state:
+    st.session_state.base_img = None
 
-# # Read step from URL if present (so refresh keeps your place)
-# params = st.query_params
-# if "step" in params and str(params["step"]).isdigit():
-#     st.session_state.step = int(params["step"])
+# DEBUG_CROP = 'pics/_last_crop.png'
 
+# if 'bg' not in st.session_state:
+#     if os.path.exists(DEBUG_CROP):
+#         with st.sidebar:
+#             use_saved_crop = st.checkbox('Use last crop', value=True, help='Automatically load the previously saved crop')
+
+#         if use_saved_crop:
+#             st.session_state.bg = Image.open(DEBUG_CROP).convert('RGB')
+#             st.session_state.step = max(st.session_state.step, 2)  #at least at step 2
+# with st.sidebar:
+#     if os.path.exists(DEBUG_CROP):
+#         if st.button('Clear saved prop'):
+#             try:
+#                 os.remove(DEBUG_CROP)
+#             except Exception as e:
+#                 st.warning(f"Couldn't remove saved crop: {e}")
+#             st.session_state.pop('bg', None)
+#             st.session_state.step = 1
+#             st.rerun()
+
+# ###########################################################################################################
 st.title("🧶 Crochet Grid Cropper")
 
-# --- Sidebar controls (NEW: debug helpers) ---
-with st.sidebar:
-    box_color = st.color_picker(label="Box Color", value="#0000FF")
-    st.markdown("### 🛠️ Debug")
-    # save_cells = st.checkbox("Save individual cell images", value=False)
-    invert = st.checkbox("Invert binary (if needed)", value=False)
-    jump = st.selectbox("Jump to step", [1, 2, 3], index=st.session_state.step - 1)
-    if jump != st.session_state.step:
-        st.session_state.step = jump
-        st.query_params["step"] = str(st.session_state.step)
+#Upload
+uploaded = st.file_uploader("Upload a photo", type=["png", "jpg", "jpeg"])
+if uploaded is not None:
+    st.session_state.base_img = Image.open(uploaded).convert("RGB")
+    # st.image(st.session_state.base_img, caption="Uploaded photo", use_column_width=False)
+if st.button("Next ▶", key="nextstep0"):
+    st.session_state.step = 1
+    st.query_params["step"] = "1"
 
-# Your original sample image (keep it)
-SAMPLE_IMG_PATH = "pics/wow.png" # TODO ask from user
-
-# Ensure 
-if not os.path.exists(SAMPLE_IMG_PATH):
-    st.error(f"Base image not found at {SAMPLE_IMG_PATH}")
-    st.stop()
-
-base_img = Image.open(SAMPLE_IMG_PATH).convert("RGB")
-
-# # If a debug crop exists and we don't already have bg in memory, preload it and skip to Step 2
-# if os.path.exists(DEBUG_CROP) and "bg" not in st.session_state:
-#     st.session_state.bg = Image.open(DEBUG_CROP).convert("RGB")
-#     st.session_state.step = max(st.session_state.step, 2)
-#     st.query_params["step"] = str(st.session_state.step)
+#Asking user to upload an image (TODO)
+SAMPLE_IMG_PATH = "pics/80.png"
+# if not os.path.exists(SAMPLE_IMG_PATH):
+#     st.error(f"Base image not found at {SAMPLE_IMG_PATH}")
+#     st.stop()
+# base_img = Image.open(SAMPLE_IMG_PATH).convert("RGB")
 
 # --- Step 1: Crop ---
 if st.session_state.step == 1:
     st.markdown("**Step 1: Crop out the background**\n\nDrag the corners to select the region containing your grid.")
-    st.session_state.bg = st_cropper(
-        base_img,
+    cropped = st_cropper(
+        st.session_state.base_img,
         realtime_update=True,
-        box_color=box_color,
+        box_color=st.color_picker(label="Pick Color", value="#0000FF"),
         aspect_ratio=None,
         return_type="image",
-        stroke_width=0.8,
+        stroke_width=0.6,
     )
+    st.session_state.bg = cropped
 
     cola, colb = st.columns([1,2])
     with cola:
         if st.button("Next ▶", key="nextstep1"):
+            # if st.session_state.bg is not None:
+            #     os.makedirs(os.path.dirname(DEBUG_CROP), exist_ok=True)
+            #     st.session_state.bg.save(DEBUG_CROP)
             st.session_state.step = 2
             st.query_params["step"] = "2"
     with colb:
         if st.button("Start Over ⟲", key="startover1"):
+            # Clear any saved crop and restart
+            # if os.path.exists(DEBUG_CROP):
+            #     try: os.remove(DEBUG_CROP)
+            #     except Exception as e: st.warning(f"Couldn't remove saved crop: {e}")
+            st.session_state.pop("bg", None)
             st.session_state.step = 1
             st.query_params["step"] = "1"
+            st.rerun()
 
 # --- Step 2: Set grid size ---
 if st.session_state.step == 2:
+    
+    realtime_update=True,
     st.markdown("**Step 2: Choose number of rows and columns**")
-    st.session_state.cols = st.number_input("Number of columns in your grid", min_value=1, value=70, step=1)
-    st.session_state.rows = st.number_input("Number of rows in your grid", min_value=1, value=70, step=1)
+    st.session_state.cols = st.number_input("Number of columns in your grid", min_value=1, value=None, step=1)
+    st.session_state.rows = st.number_input("Number of rows in your grid", min_value=1, value=None, step=1)
 
-    # Debug info (NEW)
-    st.markdown(
-        f"**Debug:** rows = `{int(st.session_state.rows)}`, cols = `{int(st.session_state.cols)}`"
-    )
-
-    colA, colB = st.columns(2)
-    with colA:
-        if st.button("Next ▶", key="nextstep2"):
-            st.session_state.step = 3
-            st.query_params["step"] = "3"
-    # with colB:
-    #     if st.button("Start Over ⟲", key="startover2"):
-    #         st.session_state.step = 1
-    #         st.query_params["step"] = "1"
+    if st.session_state.cols is not None and st.session_state.rows is not None:
+        cola, colb = st.columns([1,2])
+        with cola:
+            if st.button("Next ▶", key="nextstep2"):
+                st.session_state.step = 3
+                st.query_params["step"] = "3"
+        with colb:
+                if st.button("Start Over ⟲", key="startover2"):
+                    st.session_state.step = 2
+                    st.query_params["step"] = "2"
 
 # --- Step 3: Classify each grid cell as black or white (robust) ---
+if st.session_state.step == 3:
 
     st.markdown("**Step 3: Classify each grid cell as black or white**")
 
     # Guards
     if "bg" not in st.session_state or st.session_state.bg is None:
         st.warning("No cropped image found. Go to Step 1 or load a saved crop.")
-        st.stop()
+        st.session_state.step = 0
     if "rows" not in st.session_state or "cols" not in st.session_state:
         st.info("Set rows/cols in Step 2 first.")
-        st.stop()
+        st.session_state.step = 2
 
     img_np = np.array(st.session_state.bg)  # RGB
     h, w = img_np.shape[:2]
@@ -116,11 +131,6 @@ if st.session_state.step == 2:
     gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
     blur = cv2.GaussianBlur(gray, (3, 3), 0)
     _, binary = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-
-    # # If you added an "invert" checkbox in the sidebar:
-    # invert = st.session_state.get("invert", False)                    # To krataw gia pio meta to invert
-    # if invert:
-    #     binary = cv2.bitwise_not(binary)
 
     # --- 2) Exact tiling: distribute all pixels with integer edges ---
     # This avoids the "thin strip" problem from integer division.
@@ -171,11 +181,9 @@ if st.session_state.step == 2:
     # 4a) 
     binary_debug = cv2.cvtColor(binary.copy(), cv2.COLOR_GRAY2BGR)  # convert to 3-channel for colored lines
 
-    # Draw horizontal lines
+    # Draw horizontal and vertical lines
     for y in ys:
         cv2.line(binary_debug, (0, y), (w, y), (0, 0, 255), 1)  # red lines
-
-    # Draw vertical lines
     for x in xs:
         cv2.line(binary_debug, (x, 0), (x, h), (0, 0, 255), 1)
 
