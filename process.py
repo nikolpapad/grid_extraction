@@ -20,8 +20,8 @@ lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=100, minLineLength=100,
 # Binarize with Otsu
 otsu = cv2.threshold(gray_blur, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
 
-# plt.subplot(1,2,1), plt.imshow(gray_blur, cmap='gray')
-# plt.subplot(1,2,2),plt.imshow(otsu, cmap='gray')
+# plt.subplot(1,2,1), plt.imshow(gray_blur, cmap='gray'), plt.title("Blurred Gray")
+# plt.subplot(1,2,2),plt.imshow(otsu, cmap='gray'), plt.title("Otsu Binarization")
 # plt.show()
 
 binary_copy = otsu.copy()
