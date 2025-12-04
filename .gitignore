@@ -1,0 +1,10 @@
+# Ignore everything by default
+*
+
+# DO NOT ignore these files:
+!.gitignore
+!process.py
+!filter_comparison.py
+!utils.py
+!page_93.png
+
