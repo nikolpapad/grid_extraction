@@ -1,7 +1,7 @@
-''' Teleutaia prospatheia gia grid-extraction pipeline.
-Kainourgio repository: https://github.com/nikolpapad/grid_extraction.git
+"""
+filter_comparison for process.py
 
-'''
+"""
 import cv2
 import numpy as np
 from matplotlib import pyplot as plt
