@@ -26,5 +26,21 @@ def extractFromPDF(pdf_path, out_dir = None):
         
     doc.close()
 
-extractFromPDF(pdf_path = r"Deleteded.pdf", out_dir = r"C:\Projects\workspace_crochet\extraction_test")
+# extractFromPDF(pdf_path = r"Deleteded.pdf", out_dir = r"C:\Projects\workspace_crochet\extraction_test")
 
+def extend_line(x1, y1, x2, y2, width, height):
+    """
+    Extend a line segment to the borders of the image.
+    Returns new endpoints (Xstart, Ystart, Xend, Yend)
+    """
+
+    if x1 == x2:
+        # Vertical line
+        return x1, 0, x1, height - 1
+
+    if y1 == y2:
+        # Horizontal line
+        return 0, y1, width - 1, y1
+
+    # Should not happen since you filter near-horizontal/vertical only
+    return x1, y1, x2, y2

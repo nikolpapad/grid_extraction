@@ -6,6 +6,7 @@ import cv2
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.widgets import Slider
+from utils import extend_line
 
 
 img_path =r"c:\Users\nikol\Downloads\page_93.png"
@@ -17,7 +18,7 @@ gray_blur = cv2.medianBlur(gray, 3)
 
 #Edges detection
 edges = cv2.Canny(gray_blur, 50, 150, apertureSize=3)
-lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=100, minLineLength=100, maxLineGap=10)
+lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=100, minLineLength=100, maxLineGap=200)
 
 # Binarize with Otsu
 otsu = cv2.threshold(gray_blur, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
@@ -29,12 +30,13 @@ otsu = cv2.threshold(gray_blur, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
 binary_copy = otsu.copy()
 orig = img.copy() # original grayscale or color image
 height, width = binary_copy.shape
-maxL = int(max(height, width) )
+maxL = int(max(height, width))
 
-edges = cv2.Canny(binary_copy, 50, 150, apertureSize=3)
+edges = cv2.Canny(binary_copy, 100, 150, apertureSize=3)
 # Standard Hough Line 
-lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=250, minLineLength=20, maxLineGap=30)
+lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=250, minLineLength=20, maxLineGap=40)
 print(f"Detected {0 if lines is None else len(lines)} lines")
+blank = np.zeros((512,512,3), np.uint8)
 
 if lines is not None:
     atol = 1.0  # angle tolerance in degrees
@@ -45,7 +47,12 @@ if lines is not None:
         near_vertical   = abs(angle - 90.0) < atol
         # draw only near-horizontal/vertical lines
         if near_horizontal or near_vertical:
-            cv2.line(orig, (x1, y1), (x2, y2), (255, 0, 0), 5)
+            # cv2.line(orig, (x1, y1), (x2, y2), (255, 0, 0), 5)
+            # cv2.line(blank, (x1, y1), (x2, y2), (255, 0, 0), 5)
+            # extend line to image borders
+            x_start, y_start, x_end, y_end = extend_line(x1, y1, x2, y2, width, height)
+            # cv2.line(orig, (x_start, y_start), (x_end, y_end), (0, 0, 255), 2)
+            cv2.line(orig, (x_start, y_start), (x_end, y_end), (255, 0, 0), 3)
         
     plt.figure(figsize=(10, 10))
     plt.imshow(cv2.cvtColor(orig, cv2.COLOR_BGR2RGB))
