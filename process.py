@@ -14,23 +14,17 @@ img = cv2.imread(img_path)
 
 # Gray scale + light blur to keep edges 
 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-gray_blur = cv2.medianBlur(gray, 3)
+gray_blur = cv2.GaussianBlur(gray, (5,5), 0)
+otsu = cv2.threshold(
+    gray_blur, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
+    )[1]  # Binarize with Otsu
 
-#Edges detection
-edges = cv2.Canny(gray_blur, 50, 150, apertureSize=3)
-lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=100, minLineLength=100, maxLineGap=200)
+erosion = cv2.erode(otsu, np.ones((5, 5), np.uint8), iterations=1)
+dilation = cv2.dilate(erosion, np.ones((3, 3), np.uint8), iterations=1)
+binary_copy = cv2.bitwise_not(dilation)  # Invert: grid lines are white
 
-# Binarize with Otsu
-otsu = cv2.threshold(gray_blur, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
-
-# plt.subplot(1,2,1), plt.imshow(gray_blur, cmap='gray'), plt.title("Blurred Gray")
-# plt.subplot(1,2,2),plt.imshow(otsu, cmap='gray'), plt.title("Otsu Binarization")
-# plt.show()
-
-binary_copy = otsu.copy()
 orig = img.copy() # original grayscale or color image
 height, width = binary_copy.shape
-maxL = int(max(height, width))
 
 edges = cv2.Canny(binary_copy, 100, 150, apertureSize=3)
 # Standard Hough Line 
@@ -58,3 +52,10 @@ if lines is not None:
     plt.imshow(cv2.cvtColor(orig, cv2.COLOR_BGR2RGB))
     plt.title("Detected Grid Lines Overlay")
     plt.show()
+
+# plt.figure(figsize=(10,10))
+# plt.subplot(1,2,1); plt.imshow(cv2.cvtColor(orig, cv2.COLOR_BGR2RGB)); plt.title("Detected Grid Lines Overlay")
+# plt.subplot(1,2,2); plt.imshow(edges, cmap='gray'); plt.title("Edges")
+# plt.tight_layout()
+# plt.show()
+
