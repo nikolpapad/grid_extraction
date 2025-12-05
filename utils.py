@@ -1,7 +1,8 @@
-import fitz  # PyMuPDF
+# import fitz  # PyMuPDF
 import os
 from PIL import Image
 import io
+import math
 
 def resize(img, scale = 0.8):
     new_size = (int(img.width*scale), int(img.height*scale))
@@ -26,21 +27,46 @@ def extractFromPDF(pdf_path, out_dir = None):
         
     doc.close()
 
-# extractFromPDF(pdf_path = r"Deleteded.pdf", out_dir = r"C:\Projects\workspace_crochet\extraction_test")
 
-def extend_line(x1, y1, x2, y2, width, height):
+def extend_line(height, width, x1, y1, x2, y2, SCALE=10):
     """
-    Extend a line segment to the borders of the image.
-    Returns new endpoints (Xstart, Ystart, Xend, Yend)
+    Extend the segment (x1,y1)-(x2,y2) in both directions and clip to image.
+    Always returns 4 ints: (x_start, y_start, x_end, y_end).
+    height, width: image dimensions.
     """
+    # Image dims
+    h, w = height, width
+    distance = SCALE * max(w, h)
 
-    if x1 == x2:
-        # Vertical line
-        return x1, 0, x1, height - 1
+    # Work with Python ints
+    x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
 
-    if y1 == y2:
-        # Horizontal line
-        return 0, y1, width - 1, y1
+    dx = x2 - x1
+    dy = y2 - y1
+    length = math.hypot(dx, dy)
+    if length == 0:
+        # degenerate line; just clamp a single point
+        x1 = max(0, min(w - 1, x1))
+        y1 = max(0, min(h - 1, y1))
+        return x1, y1, x1, y1
 
-    # Should not happen since you filter near-horizontal/vertical only
-    return x1, y1, x2, y2
+    # Normalize direction
+    ux = dx / length
+    uy = dy / length
+
+    # Extend in both directions
+    p3_x = int(round(x1 - ux * distance))
+    p3_y = int(round(y1 - uy * distance))
+    p4_x = int(round(x2 + ux * distance))
+    p4_y = int(round(y2 + uy * distance))
+
+    # Clip to image boundaries
+    def clip_point(x, y):
+        x = max(0, min(w - 1, x))
+        y = max(0, min(h - 1, y))
+        return x, y
+
+    p3_x, p3_y = clip_point(p3_x, p3_y)
+    p4_x, p4_y = clip_point(p4_x, p4_y)
+
+    return p3_x, p3_y, p4_x, p4_y
