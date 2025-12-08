@@ -32,9 +32,9 @@ def extractFromPDF(pdf_path, out_dir = None):
             img.save(out, format='PNG')
             
 
-pdf_path = r"C:\Users\nikol\OneDrive\Έγγραφα\Crochet_Books\C-TT006.pdf"
-out_dir = r"C:\Users\nikol\OneDrive\Έγγραφα\Crochet_Books\deutero_imgs"
-extractFromPDF(pdf_path, out_dir)
+# # pdf_path = r"C:\Users\nikol\OneDrive\Έγγραφα\Crochet_Books\C-TT006.pdf"
+# # out_dir = r"C:\Users\nikol\OneDrive\Έγγραφα\Crochet_Books\deutero_imgs"
+# extractFromPDF(pdf_path, out_dir)
 
 def extend_line(height, width, x1, y1, x2, y2, SCALE=10):
     """
@@ -78,3 +78,34 @@ def extend_line(height, width, x1, y1, x2, y2, SCALE=10):
     p4_x, p4_y = clip_point(p4_x, p4_y)
 
     return p3_x, p3_y, p4_x, p4_y
+
+def classify_cell(mean_color):
+    """
+    Classify the mean color into basic color categories.
+    mean_color: tuple of (B, G, R) values.
+    Returns a string representing the color category.
+    Threshols:
+    - <50 -> black
+    - >200 and low spread -> white
+    - high R, low G,B -> red
+    """
+    b, g, r = mean_color
+    gray_weighted_average= 0.299 * r + 0.587 * g + 0.114 * b
+    spread = max(r,g,b) - min(r,g,b)
+
+    th_black = 30
+    th_white = 150
+    th_gray_spread = 15 # max spread for grayish colors
+    th_red = 40 # min difference R - max(G,B) to be red
+    th_dark = 100 
+
+    if gray_weighted_average < th_black: # Very dark doesn't matter the spread
+        return [0,0,0], "black"
+    elif gray_weighted_average > th_white and spread < th_gray_spread: # very bright and low spread
+        return [255,255,255], "white"
+    elif (r - max(g,b)) > th_red and gray_weighted_average < th_dark:
+        return [b,g,r], "dark_red"
+    elif not "black" or "red":
+        return [255,255,255], "white"  # light gray treated as white
+    
+

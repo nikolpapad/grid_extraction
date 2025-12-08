@@ -6,15 +6,18 @@ import cv2
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.widgets import Slider
-from utils import extend_line
+from utils import extend_line, classify_cell
 
 
-img_path =r"c:\Users\nikol\Downloads\page_102.png"
+# img_path =r"c:\Users\nikol\Downloads\page_102.png"
+img_path =r"C:\Users\nikol\Downloads\page_5.png"
 img = cv2.imread(img_path)
 
 # Gray scale + light blur to keep edges 
 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-gray_blur = cv2.GaussianBlur(gray, (3,3), 0)
+gray_blur1 = cv2.GaussianBlur(gray, (5,5), 0)
+gray_blur = cv2.GaussianBlur(gray_blur1, (5,5), 0)
+
 otsu = cv2.threshold(
     gray_blur, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
     )[1]  # Binarize with Otsu
@@ -71,143 +74,132 @@ for x1, y1, x2, y2 in lines[:, 0, :]:
     for (x_start, y_start, x_end, y_end) in list(hor_lines.values()) + list(vert_lines.values()):
         cv2.line(orig, (x_start, y_start), (x_end, y_end), (255, 0, 0), 3)
 
-# Original image + detected lines overlay
-plt.figure(figsize=(10, 10))
-plt.imshow(cv2.cvtColor(orig, cv2.COLOR_BGR2RGB))
-plt.title("Detected Grid Lines Overlay")
+## Original image + detected lines overlay
+# plt.figure(figsize=(10, 10))
+# plt.imshow(cv2.cvtColor(orig, cv2.COLOR_BGR2RGB))
+# plt.title("Detected Grid Lines Overlay")
 
 ###################################################################################################
 
-# Get one unique position per line (median of grouped positions)
-ys_raw = sorted(int(np.median(vals)) for vals in horizontal_groups.values())
-xs_raw = sorted(int(np.median(vals)) for vals in vertical_groups.values())
+# # Get one unique position per line (median of grouped positions)
+# ys_raw = sorted(int(np.median(vals)) for vals in horizontal_groups.values())
+# xs_raw = sorted(int(np.median(vals)) for vals in vertical_groups.values())
 
-ys_raw = np.array(ys_raw, dtype=np.int32)
-xs_raw = np.array(xs_raw, dtype=np.int32)
+# ys_raw = np.array(ys_raw, dtype=np.int32)
+# xs_raw = np.array(xs_raw, dtype=np.int32)
 
-# ---- compute distances along each axis ----
-x_diffs = np.diff(xs_raw) if len(xs_raw) > 1 else np.array([])
-y_diffs = np.diff(ys_raw) if len(ys_raw) > 1 else np.array([])
+# # ---- compute distances along each axis ----
+# x_diffs = np.diff(xs_raw) if len(xs_raw) > 1 else np.array([])
+# y_diffs = np.diff(ys_raw) if len(ys_raw) > 1 else np.array([])
 
-all_diffs = np.concatenate([x_diffs, y_diffs]) if len(x_diffs) + len(y_diffs) > 0 else np.array([])
+# all_diffs = np.concatenate([x_diffs, y_diffs]) if len(x_diffs) + len(y_diffs) > 0 else np.array([])
+# plot_diff = False
 
-if all_diffs.size > 0:
-    # Histogram
-    # plt.figure(figsize=(7,4))
-    # plt.hist(all_diffs, bins='auto', edgecolor='black')
-    # plt.title("Histogram of distances between detected lines")
-    # plt.xlabel("Distance (pixels)")
-    # plt.ylabel("Count")
-    # plt.tight_layout()
+# if all_diffs.size > 0 and plot_diff == True:
+#     # Sorted distances
+#     sorted_diffs_x = np.sort(x_diffs)
+#     sorted_diffs_y = np.sort(y_diffs)
+#     plt.figure(figsize=(7,4))
+#     # Plot X-axis distances (vertical grid spacing)
+#     plt.subplot(1, 2, 1)
+#     plt.plot(sorted_diffs_x, marker='o')
+#     plt.title("Sorted distances on X axis (Vertical lines)")
+#     plt.xlabel("Index")
+#     plt.ylabel("Distance (pixels)")
+#     plt.grid(True)
 
-    # Sorted distances
-    sorted_diffs_x = np.sort(x_diffs)
-    sorted_diffs_y = np.sort(y_diffs)
-    plt.figure(figsize=(7,4))
-    # Plot X-axis distances (vertical grid spacing)
-    plt.subplot(1, 2, 1)
-    plt.plot(sorted_diffs_x, marker='o')
-    plt.title("Sorted distances on X axis (Vertical lines)")
-    plt.xlabel("Index")
-    plt.ylabel("Distance (pixels)")
-    plt.grid(True)
+#     # Plot Y-axis distances (horizontal grid spacing)
+#     plt.subplot(1, 2, 2)
+#     plt.plot(sorted_diffs_y, marker='o')
+#     plt.title("Sorted distances on Y axis (Horizontal lines)")
+#     plt.xlabel("Index")
+#     plt.ylabel("Distance (pixels)")
+#     plt.grid(True)
 
-    # Plot Y-axis distances (horizontal grid spacing)
-    plt.subplot(1, 2, 2)
-    plt.plot(sorted_diffs_y, marker='o')
-    plt.title("Sorted distances on Y axis (Horizontal lines)")
-    plt.xlabel("Index")
-    plt.ylabel("Distance (pixels)")
-    plt.grid(True)
+#     threshold = np.median(all_diffs)  # simple separater; works because small<<big
 
-    threshold = np.median(all_diffs)  # simple separater; works because small<<big
+#     small = all_diffs[all_diffs < threshold]
+#     big   = all_diffs[all_diffs >= threshold]
 
-    small = all_diffs[all_diffs < threshold]
-    big   = all_diffs[all_diffs >= threshold]
-
-    plt.figure(figsize=(7,4))
-    plt.hist(small, bins='auto', alpha=0.6, label='Small distances (thickness)')
-    plt.hist(big, bins='auto', alpha=0.6, label='Large distances (grid spacing)')
-    plt.title("Separated distance clusters")
-    plt.xlabel("Distance")
-    plt.ylabel("Count")
-    plt.legend()
-    plt.show()
-else:
-    print("Not enough lines to compute distances.")
-print("Small distances: ", small)
-print("Large distances: ", big)
+#     plt.figure(figsize=(7,4))
+#     plt.hist(small, bins='auto', alpha=0.6, label='Small distances (thickness)')
+#     plt.hist(big, bins='auto', alpha=0.6, label='Large distances (grid spacing)')
+#     plt.title("Separated distance clusters")
+#     plt.xlabel("Distance")
+#     plt.ylabel("Count")
+#     plt.legend()
+#     plt.show()
+#     print("Small distances: ", small)
+#     print("Large distances: ", big)
+# else:
+#     print("Not enough lines to compute distances.")
 
 
-#####################################################################
-# TODO ----> Check if the heuristic separation works well in practice
-# ---- Compoute average positions ----
-diffs = np.diff(xs_raw)  # distances between consecutive detections
 
-# Sort the diffs: early ones tend to be "small", later ones "big"
-sorted_diffs = np.sort(diffs)
+# #####################################################################
+# # TODO ----> Check if the heuristic separation works well in practice
+# # ---- Compoute average positions ----
+# def estimate_thickness_and_gap(xs_raw):
+#     diffs = np.diff(xs_raw)  # distances between consecutive detections
 
-# Heuristic split: first 30% = small edges, last 70% = bigger gaps
-k = max(1, int(0.3 * len(sorted_diffs)))  # at least 1 element
+#     # Sort the diffs: early ones tend to be "small", later ones "big"
+#     sorted_diffs = np.sort(diffs)
 
-small_diffs = sorted_diffs[:k]
-big_diffs   = sorted_diffs[k:]
+#     # Heuristic split: first 30% = small edges, last 70% = bigger gaps
+#     k = max(1, int(0.3 * len(sorted_diffs)))  # at least 1 element
 
-thickness_est = np.median(small_diffs) if len(small_diffs) > 0 else None
-square_gap_est = np.median(big_diffs)  if len(big_diffs) > 0 else None
+#     small_diffs = sorted_diffs[:k]
+#     big_diffs   = sorted_diffs[k:]
 
-print("Estimated thickness:", thickness_est)
-print("Estimated grid gap (square side):", square_gap_est)
+#     thickness_est = np.median(small_diffs) if len(small_diffs) > 0 else None
+#     square_gap_est = np.median(big_diffs)  if len(big_diffs) > 0 else None
 
-#####################################################
-# Instead of raw values, take a median of each group
+#     print("Estimated thickness:", thickness_est)
+#     print("Estimated grid gap (square side):", square_gap_est)
+# #####################################################
     
-def recreate_grid_lines(xs_raw, ys_raw):
-    # Recreate grid lines on original image
-    xs_raw = np.array(xs_raw, dtype=np.int32)
-    ys_raw = np.array(ys_raw, dtype=np.int32)
+# def recreate_grid_lines(xs_raw, ys_raw):
+#     # Recreate grid lines on original image
+#     x_diffs = np.diff(xs_raw)
+#     y_diffs = np.diff(ys_raw)
 
-    x_diffs = np.diff(xs_raw)
-    y_diffs = np.diff(ys_raw)
+#     # Use median spacing as the "true" spacing
+#     x_step = np.median(x_diffs)
+#     y_step = np.median(y_diffs)
 
-    # Use median spacing as the "true" spacing
-    x_step = np.median(x_diffs)
-    y_step = np.median(y_diffs)
+#     # Optional: snap each line to the nearest multiple of the step
+#     x0 = xs_raw[0]
+#     y0 = ys_raw[0]
 
-    # Optional: snap each line to the nearest multiple of the step
-    x0 = xs_raw[0]
-    y0 = ys_raw[0]
+#     xs_snapped = [int(round(x0 + i * x_step)) for i in range(len(xs_raw))]
+#     ys_snapped = [int(round(y0 + j * y_step)) for j in range(len(ys_raw))]
+#     grid_img = np.ones_like(gray) * 255  # white background
 
-    xs_snapped = [int(round(x0 + i * x_step)) for i in range(len(xs_raw))]
-    ys_snapped = [int(round(y0 + j * y_step)) for j in range(len(ys_raw))]
-    grid_img = np.ones_like(gray) * 255  # white background
+#     for x in xs_snapped:
+#         cv2.line(grid_img, (x, ys_snapped[0]), (x, ys_snapped[-1]), 0, 1)
 
-    for x in xs_snapped:
-        cv2.line(grid_img, (x, ys_snapped[0]), (x, ys_snapped[-1]), 0, 1)
+#     for y in ys_snapped:
+#         cv2.line(grid_img, (xs_snapped[0], y), (xs_snapped[-1], y), 0, 1)
 
-    for y in ys_snapped:
-        cv2.line(grid_img, (xs_snapped[0], y), (xs_snapped[-1], y), 0, 1)
+#     plt.imshow(grid_img, cmap='inferno')
+#     plt.title("Recreated grid")
+#     plt.show()
+#######################################################################################################
 
-    plt.imshow(grid_img, cmap='gray')
-    plt.title("Recreated grid")
-    plt.show()
 xs_raw = sorted(int(np.median(group)) for group in vertical_groups.values()) # unique x for each vertical line
 ys_raw = sorted(int(np.median(group)) for group in horizontal_groups.values())
 # recreate_grid_lines(xs_raw, ys_raw)
 
 
-# Define grid bounding box and cut directly on grid
-grid_left   = xs_raw[0]
-grid_right  = xs_raw[-1]
-grid_top    = ys_raw[0]
-grid_bottom = ys_raw[-1]
+grid_left,grid_right = xs_raw[0], xs_raw[-1]
+grid_top, grid_bottom = ys_raw[0], ys_raw[-1]
 
 grid_width  = grid_right - grid_left
 grid_height = grid_bottom - grid_top
 
 print(f"Grid bounding box: x=[{grid_left}, {grid_right}], y=[{grid_top}, {grid_bottom}]")
 
-n_cols = len(xs_raw) - 1
+n_cols = len(xs_raw) - 1 # for 3 vertical lines -> 2 columns
 n_rows = len(ys_raw) - 1
 
 # image where we'll reconstruct the pattern inside the grid only
@@ -228,7 +220,7 @@ for j in range(n_rows):
         x1 = xs_raw[i]
         x2 = xs_raw[i + 1]
 
-        # ----- 7a. Crop original cell (inside the grid) -----
+        # ----- Crop original cell (inside the grid) -----
         yy1 = max(y1 + cell_margin, 0)
         yy2 = min(y2 - cell_margin, height)
         xx1 = max(x1 + cell_margin, 0)
@@ -240,31 +232,31 @@ for j in range(n_rows):
             mean_color = np.array([255, 255, 255], dtype=np.uint8)
         else:
             mean_color = cell.reshape(-1, 3).mean(axis=0).astype(np.uint8)
+            color, clabel = classify_cell(mean_color)
+            if clabel == "other": 
+                print(f"Cell ({i},{j}) mean color: {mean_color}, classified as {clabel}")
+                
+            
+        row_colors.append(color)
 
-        row_colors.append(mean_color)
-
-        # ----- 7b. Paint that cell area in the reconstructed image -----
+        # ----- Paint that cell area in the reconstructed image -----
         new_y1 = y1 - grid_top
         new_y2 = y2 - grid_top
         new_x1 = x1 - grid_left
         new_x2 = x2 - grid_left
 
-        reconstructed[new_y1:new_y2, new_x1:new_x2] = mean_color
+        reconstructed[new_y1:new_y2, new_x1:new_x2] = color
 
     pattern_colors.append(row_colors)
 
 print(f"Grid cells: {n_rows} rows x {n_cols} cols")
 
+print(f"Cell {cell.size}")
 
-# Show only the reconstructed pattern (grid area)
-plt.figure(figsize=(10, 10))
-plt.title("Detected grid (cropped to grid area)")
-plt.axis("off")
-plt.subplot(1,2,1), plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
-plt.subplot(1,2,2), plt.imshow(cv2.cvtColor(img[grid_top:grid_bottom, grid_left:grid_right], cv2.COLOR_BGR2RGB))
-plt.title("Original grid area")
-plt.imshow(cv2.cvtColor(reconstructed, cv2.COLOR_BGR2RGB))
-plt.title("Reconstructed pattern (one solid color per box, only inside grid)")
-plt.axis("off")
-plt.show()
+
+plt.figure(figsize=(4, 4))
+plt.subplot(1, 2, 1),plt.imshow(cv2.cvtColor(orig, cv2.COLOR_BGR2RGB)),plt.title("Original grid area"),plt.axis("off")
+plt.subplot(1, 2, 2),plt.imshow(cv2.cvtColor(reconstructed, cv2.COLOR_BGR2RGB)),plt.title("Reconstructed pattern"),plt.axis("off")
+# plt.show()
+
 
