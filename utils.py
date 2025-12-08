@@ -1,8 +1,9 @@
-# import fitz  # PyMuPDF
+import fitz  # PyMuPDF
 import os
 from PIL import Image
 import io
 import math
+from tqdm import tqdm
 
 def resize(img, scale = 0.8):
     new_size = (int(img.width*scale), int(img.height*scale))
@@ -15,18 +16,25 @@ def extractFromPDF(pdf_path, out_dir = None):
         out_dir = os.path.splitext(pdf_path)[0] + "_pages"
     os.makedirs(out_dir, exist_ok=True)
 
-    doc = fitz.open(pdf_path)
-    for i, page in enumerate(doc, start=1):
-        pix = page.get_pixmap(dpi=400)     # high quality
-        img_bytes = pix.tobytes("png")
+    with fitz.open(pdf_path) as doc:
+        total_pages = len(doc)
+        for i, page in tqdm(enumerate(doc, start=1), total = total_pages , desc="Extracting pages into images:"):
+            out = os.path.join(out_dir, f"page_{i}.png")
+            
+            if os.path.exists(out):
+                tqdm.write(f"Skipped existing: {out}")
+                continue
 
-        img = Image.open(io.BytesIO(img_bytes))
+            pix = page.get_pixmap(dpi=400)     # high quality
+            img_bytes = pix.tobytes("png")
 
-        out = os.path.join(out_dir, f"page_{i}.png")
-        img.save(out, format='PNG')
-        
-    doc.close()
+            img = Image.open(io.BytesIO(img_bytes))
+            img.save(out, format='PNG')
+            
 
+pdf_path = r"C:\Users\nikol\OneDrive\Έγγραφα\Crochet_Books\C-TT006.pdf"
+out_dir = r"C:\Users\nikol\OneDrive\Έγγραφα\Crochet_Books\deutero_imgs"
+extractFromPDF(pdf_path, out_dir)
 
 def extend_line(height, width, x1, y1, x2, y2, SCALE=10):
     """
