@@ -7,7 +7,8 @@ import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.widgets import Slider
 from tqdm import tqdm
-from utils import extend_line, classify_cell, refine_line_positions, color_all_cells
+from utils import extend_line, classify_cell, refine_line_positions, color_all_cells, rle_labels, rle_to_instructions
+from utils import generate_instructions
 
 # img_path =r"c:\Users\nikol\Downloads\page_80.png"
 # img_path = r"C:\Users\nikol\Downloads\page_4.png"
@@ -33,11 +34,11 @@ height, width = binary_copy.shape
 edges = cv2.Canny(binary_copy, 100, 150, apertureSize=3)
 # Standard Hough Line 
 lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=250, minLineLength=20, maxLineGap=40)
-print(f"\nDetected {0 if lines is None else len(lines)} lines")
-blank = np.zeros((512,512,3), np.uint8)
-
 if lines is None:
     raise RuntimeError("No lines detected. Tune parameters or preprocessing.")
+else:
+    print(f"\nDetected {0 if lines is None else len(lines)} lines")
+
 # ----------- Separate lines into horizontal and vertical + cluster -------------
 atol = 0.1  # angle tolerance in degrees
 pixel_tol = 5
@@ -103,15 +104,15 @@ grid_height = grid_bottom - grid_top
 n_cols, n_rows = len(xs_raw) - 1, len(ys_raw) - 1 # for 3 vertical lines -> 2 columns
 
 reconstructed = np.zeros((grid_height, grid_width, 3), dtype=np.uint8)
-debug_cells = color_all_cells(reconstructed, xs_raw, ys_raw, n_cols, n_rows, grid_left, grid_top,orig, plotting = True)
+debug_cells = color_all_cells(reconstructed, xs_raw, ys_raw, n_cols, n_rows, grid_left, grid_top,orig, plotting = False)
 
 
 cell_margin = 5 # margin to avoid sampling the black grid lines
 
 # Pattern colors per cell!!!
-pattern_colors = []
+pattern_colors, pattern_labels = [], []
 for j in tqdm(range(n_rows), desc="Paint that cell area in the reconstructed image...."):
-    row_colors = []
+    row_colors, row_clabels = [], []
     y1 = ys_raw[j]
     y2 = ys_raw[j + 1]
 
@@ -128,7 +129,7 @@ for j in tqdm(range(n_rows), desc="Paint that cell area in the reconstructed ima
         cell = img[yy1:yy2, xx1:xx2]
 
         if cell.size == 0:
-            color = np.array([255, 255, 255], dtype=np.uint8)
+            color = np.array([5, 180, 85], dtype=np.uint8)
             color_label = "white"
         else:
             mean_color = cell.reshape(-1, 3).mean(axis=0).astype(np.float32)
@@ -137,7 +138,7 @@ for j in tqdm(range(n_rows), desc="Paint that cell area in the reconstructed ima
                 print(f"Cell ({i},{j}) mean color: {mean_color}, classified as {clabel}")
                 
         row_colors.append(color)
-
+        row_clabels.append(clabel)
         # ----- Paint that cell area in the reconstructed image -----
         new_y1 = y1 - grid_top
         new_y2 = y2 - grid_top
@@ -146,13 +147,19 @@ for j in tqdm(range(n_rows), desc="Paint that cell area in the reconstructed ima
 
         reconstructed[new_y1:new_y2, new_x1:new_x2] = color
 
-    pattern_colors.append(row_colors)
+    pattern_colors.append(row_colors) # can be skipped
+    pattern_labels.append((rle_labels(row_clabels)))
 
 print(f"--------\nGrid size: width={grid_width}, height={grid_height}. \nGrid cells: {n_rows} rows x {n_cols} cols \n--------")
+instructions = generate_instructions(pattern_labels, start_corner="bottom-left", crochet=False)
+print("-------------------------------------------------------------------\nPattern Instructions:")
+for instr in instructions:
+    print(instr)
 
 plt.figure(figsize=(4, 4))
-plt.subplot(1, 2, 1),plt.imshow(cv2.cvtColor(orig, cv2.COLOR_BGR2RGB)),plt.title("Original grid area"),plt.axis("off")
-plt.subplot(1, 2, 2),plt.imshow(cv2.cvtColor(reconstructed, cv2.COLOR_BGR2RGB)),plt.title("Reconstructed pattern"),plt.axis("off")
+plt.subplot(1, 3, 1),plt.imshow(cv2.cvtColor(orig, cv2.COLOR_BGR2RGB)),plt.title("Original grid area"),plt.axis("off")
+plt.subplot(1, 3, 2),plt.imshow(cv2.cvtColor(debug_cells, cv2.COLOR_BGR2RGB)),plt.title("Each detected cell = different color"),plt.axis("off")
+plt.subplot(1, 3, 3),plt.imshow(cv2.cvtColor(reconstructed, cv2.COLOR_BGR2RGB)),plt.title("Reconstructed pattern"),plt.axis("off")
 plt.show()
 
 

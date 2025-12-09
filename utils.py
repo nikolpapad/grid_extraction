@@ -108,7 +108,7 @@ def classify_cell(mean_color):
         return (np.array([255,255,255], dtype=np.uint8)), "white"
     elif (r - max(g,b)) > th_red and gray_weighted_average < th_dark:
         return (np.array([0,0,153], dtype=np.uint8)), "dark_red"
-    elif not "black" or "red":
+    else:
         return (np.array([255,255,255], dtype=np.uint8)), "white"  # light gray treated as white
     
 def refine_line_positions(raw_positions):
@@ -192,3 +192,101 @@ def color_all_cells(reconstructed, xs_raw, ys_raw, n_cols, n_rows, grid_left, gr
         plt.show()
 
     return debug_cells
+
+def rle_labels(labels):
+    """
+    Run-length encode a list of labels.
+    Returns a list of (label, count) tuples.
+    """
+    if not labels:
+        return []
+    runs = []
+    current_label = labels[0]
+    count = 1
+
+    for lbl in labels[1:]:
+        if lbl == current_label:
+            count += 1
+        else:
+            runs.append((current_label, count))
+            current_label = lbl
+            count = 1
+    runs.append((current_label, count))
+    return runs
+
+def rle_to_instructions(runs):
+    """
+    Docstring for rle_to_instructions
+    
+    :param runs: list of (label, count) tuples, ex. [("white", 5), ("dark_red", 1)]
+    :return: list of count and color strings, ex. 5 White, 1 Red
+    """
+    pretty = {
+            "white": "White",
+            "black": "Black",
+            "dark_red": "Red",
+        }
+    
+    parts = []
+
+    for labels, count in runs:      
+        color = pretty.get(labels, labels)
+        if count == 1:
+            parts.append(f"1 {color}")
+        else:
+            parts.append(f"{count} {color}s")
+    return ", ".join(parts)
+
+def generate_instructions(pattern_labels, start_corner="bottom-left", crochet=False):
+
+    instructions = []
+    n = len(pattern_labels) 
+    if n == 0:
+        return []
+    # 1) Determine vertical order: bottom to top? #
+    start_corner = start_corner.lower()
+    if start_corner.startswith("bottom"):
+        row_indices = (n-1, -1, -1)  # bottom to top
+    elif start_corner.startswith("top"):
+        row_indices = (0, n, 1)  # top to bottom
+    else:
+        raise ValueError("start_corner must be 'bottom-left' or 'top-left'")
+    # 2) Generate instructions for horizontal order: right or left? #
+    if start_corner.endswith("left"):
+        base_direction = "left-to-right"
+    elif start_corner.endswith("right"):
+        base_direction = "right-to-left"
+    else:
+        raise ValueError("start_corner must be 'bottom-left' or 'top-left'")
+    # 3) Generate instructions #
+    for row_from_bottom, row_index in enumerate(range(row_indices[0], row_indices[1], row_indices[2]), start=1):
+        row = pattern_labels[row_index]
+
+        if not crochet:
+            hor_direction = base_direction
+        else: 
+            if row % 2 == 1:
+                hor_direction = base_direction
+            else:
+                if base_direction == "left-to-right":
+                    hor_direction = "right-to-left"
+                else:
+                    hor_direction = "left-to-right"
+        
+        
+        if hor_direction == "left-to-right":
+            labels = row  # left to right
+        else:
+            labels = row[::-1] # Right to left
+        
+        runs = rle_labels(labels)
+        instr = rle_to_instructions(runs)
+        instructions.append(
+            f"Row {row_from_bottom} (start {start_corner}): {instr}"
+            )
+    return instructions
+        
+
+    
+
+
