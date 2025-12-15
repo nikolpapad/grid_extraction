@@ -8,11 +8,6 @@ import numpy as np
 from matplotlib import pyplot as plt
 import cv2
 
-def resize(img, scale = 0.8):
-    new_size = (int(img.width*scale), int(img.height*scale))
-    resized = img.resize(new_size, Image.LANCZOS) # high quality downsampling flter
-    return resized
-
 #  Take pdf five back images
 def extractFromPDF(pdf_path, out_dir = None):
     if out_dir is None:
@@ -179,21 +174,10 @@ def color_all_cells(reconstructed, xs_raw, ys_raw, n_cols, n_rows, grid_left, gr
             new_x2 = x2 - grid_left
 
             debug_cells[new_y1:new_y2, new_x1:new_x2] = rand_color
-    if plotting:
-        plt.figure(figsize=(6, 6))
-        plt.subplot(1, 2, 1)
-        plt.imshow(cv2.cvtColor(orig, cv2.COLOR_BGR2RGB))
-        plt.title(f"Original + detected lines\n(rows={n_rows}, cols={n_cols})")
-        plt.axis("off")
-        plt.subplot(1, 2, 2)
-        plt.imshow(cv2.cvtColor(debug_cells, cv2.COLOR_BGR2RGB))
-        plt.title("Each detected cell = different color")
-        plt.axis("off")
-        plt.show()
-
     return debug_cells
 
 def rle_labels(labels):
+
     """
     Run-length encode a list of labels.
     Returns a list of (label, count) tuples.
@@ -210,9 +194,12 @@ def rle_labels(labels):
         else:
             runs.append((current_label, count))
             current_label = lbl
-            count = 1
+            count = 1 # reset 
+
     runs.append((current_label, count))
     return runs
+
+
 
 def rle_to_instructions(runs):
     """
@@ -232,9 +219,9 @@ def rle_to_instructions(runs):
     for labels, count in runs:      
         color = pretty.get(labels, labels)
         if count == 1:
-            parts.append(f"1 {color}")
+            parts.append(str(f"1 {color}"))
         else:
-            parts.append(f"{count} {color}s")
+            parts.append(str(f"{count} {color}s"))
     return ", ".join(parts)
 
 def generate_instructions(pattern_labels, start_corner="bottom-left", crochet=False):
@@ -265,7 +252,7 @@ def generate_instructions(pattern_labels, start_corner="bottom-left", crochet=Fa
         if not crochet:
             hor_direction = base_direction
         else: 
-            if row % 2 == 1:
+            if row_index % 2 == 1:
                 hor_direction = base_direction
             else:
                 if base_direction == "left-to-right":
@@ -278,7 +265,7 @@ def generate_instructions(pattern_labels, start_corner="bottom-left", crochet=Fa
             labels = row  # left to right
         else:
             labels = row[::-1] # Right to left
-        
+
         runs = rle_labels(labels)
         instr = rle_to_instructions(runs)
         instructions.append(

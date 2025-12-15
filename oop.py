@@ -18,7 +18,7 @@ from utils import (
 
 
 class GridExtractor:
-    def __init__(self, img_path, cell_margin=5, atol=0.1, pixel_tol=5):
+    def __init__(self, img_path, cell_margin=3, atol=0.1, pixel_tol=5):
         self.img_path = img_path
         self.cell_margin = cell_margin
         self.atol = atol
@@ -29,6 +29,8 @@ class GridExtractor:
         self.binary = None
         self.edges = None
         self.lines = None
+        self.height = None
+        self.width = None
 
         # line coordinates
         self.xs_raw = []
@@ -53,6 +55,7 @@ class GridExtractor:
         self.img = cv2.imread(self.img_path)
         if self.img is None:
             raise ValueError("Could not read image at " + self.img_path)
+        self.height, self.width = self.img.shape[:2]
 
     def preprocess(self):
         gray = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
@@ -65,7 +68,7 @@ class GridExtractor:
 
         self.binary = cv2.bitwise_not(dilate)
         self.gray = gray
-        self.edges = cv2.Canny(self.binary, 100, 150, apertureSize=3)
+        self.edges = cv2.Canny(self.binary, 50, 150, apertureSize=3)
 
     # -------------------------------------
     # 2. Detect lines with Hough Transform
@@ -77,6 +80,8 @@ class GridExtractor:
         )
         if self.lines is None:
             raise RuntimeError("No lines detected")
+        else:
+            print(f"\nDetected {len(self.lines)} lines")
 
     # ----------------------------------------------------------
     # 3. Separate horizontal/vertical lines and extract grid
@@ -176,30 +181,41 @@ class GridExtractor:
     # ----------------------------
     def build_instructions(self, start_corner="bottom-left", alternate=False):
         # convert each row of labels → RLE
-        rle_rows = [rle_labels(row) for row in self.pattern_labels]
-        return generate_instructions(
-            rle_rows, start_corner=start_corner, crochet=True
+        # rle_rows = [rle_labels(row) for row in self.pattern_labels]
+        sth =  generate_instructions(
+            pattern_labels=self.pattern_labels, start_corner=start_corner, crochet=True
         )
+        return sth
 
     # ----------------------------
     # 6. VISUALIZE RESULTS
     # ----------------------------
+   
     def show_results(self):
-        plt.figure(figsize=(6, 6))
-        plt.subplot(1, 3, 1)
-        plt.imshow(cv2.cvtColor(self.img, cv2.COLOR_BGR2RGB))
-        plt.title("Original")
-        plt.axis("off")
+        fig, axes = plt.subplots(1, 3, figsize=(12, 6), sharex=True, sharey=True)
 
-        plt.subplot(1, 3, 2)
-        plt.imshow(cv2.cvtColor(self.debug_cells, cv2.COLOR_BGR2RGB))
-        plt.title("Cells (Debug)")
-        plt.axis("off")
+        ax1, ax2, ax3 = axes
 
-        plt.subplot(1, 3, 3)
-        plt.imshow(cv2.cvtColor(self.reconstructed, cv2.COLOR_BGR2RGB))
-        plt.title("Reconstructed Pattern")
-        plt.axis("off")
+        ax1.imshow(cv2.cvtColor(self.img, cv2.COLOR_BGR2RGB))
+        ax1.set_title("Original")
+        ax1.axis("off")
+
+        if self.debug_cells is not None and self.debug_cells.size > 0:
+            ax2.imshow(cv2.cvtColor(self.debug_cells, cv2.COLOR_BGR2RGB))
+        else:
+            ax2.text(0.5, 0.5, "debug_cells empty", ha="center", va="center")
+        ax2.set_title("Cells (Debug)")
+        ax2.axis("off")
+
+        if self.reconstructed is not None and self.reconstructed.size > 0:
+            ax3.imshow(cv2.cvtColor(self.reconstructed, cv2.COLOR_BGR2RGB))
+        else:
+            ax3.text(0.5, 0.5, "reconstructed empty", ha="center", va="center")
+        ax3.set_title("Reconstructed Pattern")
+        ax3.axis("off")
+
+        
+
         plt.tight_layout()
         plt.show()
 
