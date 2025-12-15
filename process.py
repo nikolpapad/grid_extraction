@@ -1,6 +1,4 @@
-''' Teleutaia prospatheia gia grid-extraction pipeline.
-Kainourgio repository: https://github.com/nikolpapad/grid_extraction.git
-
+''' Repository: https://github.com/nikolpapad/grid_extraction.git
 '''
 import cv2
 import numpy as np
@@ -10,8 +8,6 @@ from tqdm import tqdm
 from utils import extend_line, classify_cell, refine_line_positions, color_all_cells, rle_labels, rle_to_instructions
 from utils import generate_instructions
 
-# img_path =r"c:\Users\nikol\Downloads\page_80.png"
-# img_path = r"C:\Users\nikol\Downloads\page_4.png"
 img_path =r"C:\Users\nikol\Downloads\page_5.png"
 img = cv2.imread(img_path)
 
@@ -32,6 +28,7 @@ orig = img.copy() # original grayscale or color image
 height, width = binary_copy.shape
 
 edges = cv2.Canny(binary_copy, 100, 150, apertureSize=3)
+
 # Standard Hough Line 
 lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=250, minLineLength=20, maxLineGap=40)
 if lines is None:
@@ -73,8 +70,8 @@ for x1, y1, x2, y2 in tqdm(lines[:, 0, :], desc="Processing detected lines:"):
             vert_lines[key] = (x_start, y_start, x_end, y_end)
             vertical_groups[key].append(x_start)
 
-    for (x_start, y_start, x_end, y_end) in list(hor_lines.values()) + list(vert_lines.values()):
-        cv2.line(orig, (x_start, y_start), (x_end, y_end), (255, 0, 0), 3)
+    # for (x_start, y_start, x_end, y_end) in list(hor_lines.values()) + list(vert_lines.values()):
+    #     cv2.line(orig, (x_start, y_start), (x_end, y_end), (255, 0, 0), 3)
 
 # ## Original image + detected lines overlay
 # plt.figure(figsize=(10, 10))

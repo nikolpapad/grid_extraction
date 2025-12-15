@@ -12,7 +12,7 @@ instructions = extractor.build_instructions(start_corner="bottom-left", alternat
 # print(extractor.pattern_labels)
 # print("\n\n\n")
 # print(instructions)
-# extractor.show_results()
+extractor.show_results()
 
 for i in instructions:
     print(i)

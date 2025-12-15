@@ -187,8 +187,42 @@ class GridExtractor:
         )
         return sth
 
+
+    def reconstructed_with_grid(self, line_color=(0, 0, 0), thickness=1):
+        """
+        Returns a copy of self.reconstructed with the detected grid lines drawn on top.
+        line_color is BGR (OpenCV style).
+        """
+        if self.reconstructed is None:
+            raise RuntimeError("reconstructed is None. Run extract_cells() first.")
+        if not self.xs_raw or not self.ys_raw:
+            raise RuntimeError("Grid lines not available. Run extract_grid_lines() first.")
+
+        overlay = self.reconstructed.copy()
+
+        # Convert absolute image coords -> reconstructed coords
+        xs = [x - self.grid_left for x in self.xs_raw]
+        ys = [y - self.grid_top for y in self.ys_raw]
+
+        h, w = overlay.shape[:2]
+
+        # Vertical lines
+        for x in xs:
+            x = int(round(x))
+            if 0 <= x < w:
+                cv2.line(overlay, (x, 0), (x, h - 1), line_color, thickness)
+
+        # Horizontal lines
+        for y in ys:
+            y = int(round(y))
+            if 0 <= y < h:
+                cv2.line(overlay, (0, y), (w - 1, y), line_color, thickness)
+
+        return overlay
+
+
     # ----------------------------
-    # 6. VISUALIZE RESULTS
+    # 7. VISUALIZE RESULTS
     # ----------------------------
    
     def show_results(self):
@@ -207,15 +241,18 @@ class GridExtractor:
         ax2.set_title("Cells (Debug)")
         ax2.axis("off")
 
+         # NEW: reconstructed with grid overlay
         if self.reconstructed is not None and self.reconstructed.size > 0:
-            ax3.imshow(cv2.cvtColor(self.reconstructed, cv2.COLOR_BGR2RGB))
+            overlay = self.reconstructed_with_grid(line_color=(0, 0, 0), thickness=1)
+            ax3.imshow(cv2.cvtColor(overlay, cv2.COLOR_BGR2RGB))
         else:
             ax3.text(0.5, 0.5, "reconstructed empty", ha="center", va="center")
-        ax3.set_title("Reconstructed Pattern")
+        ax3.set_title("Reconstructed + Grid")
         ax3.axis("off")
-
         
 
         plt.tight_layout()
         plt.show()
 
+
+    
