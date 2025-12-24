@@ -30,8 +30,8 @@ def extractFromPDF(pdf_path, out_dir = None):
             img.save(out, format='PNG')
             
 
-# # pdf_path = r"C:\Users\nikol\OneDrive\Έγγραφα\Crochet_Books\C-TT006.pdf"
-# # out_dir = r"C:\Users\nikol\OneDrive\Έγγραφα\Crochet_Books\deutero_imgs"
+# pdf_path = r"C:\Users\nikol\OneDrive\Έγγραφα\Crochet_Books\pakitafiletancien_IX.pdf"
+# out_dir = r"C:\Users\nikol\OneDrive\Έγγραφα\Crochet_Books\pakita"
 # extractFromPDF(pdf_path, out_dir)
 
 def extend_line(height, width, x1, y1, x2, y2, SCALE=10):
@@ -225,7 +225,7 @@ def rle_to_instructions(runs):
     return ", ".join(parts)
 
 def generate_instructions(pattern_labels, start_corner="bottom-left", crochet=False):
-
+    # print(pattern_labels)
     instructions = []
     n = len(pattern_labels) 
     if n == 0:
@@ -251,8 +251,9 @@ def generate_instructions(pattern_labels, start_corner="bottom-left", crochet=Fa
 
         if not crochet:
             hor_direction = base_direction
-        else: 
-            if row_index % 2 == 1:
+        else:
+             
+            if row_from_bottom % 2 == 1: # was row_index
                 hor_direction = base_direction
             else:
                 if base_direction == "left-to-right":
