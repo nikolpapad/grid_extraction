@@ -7,7 +7,7 @@ from tqdm import tqdm
 from collections import defaultdict
 from matplotlib import pyplot as plt
 
-from utils import (
+from .utils import (
     extend_line,
     classify_cell,
     refine_line_positions,
